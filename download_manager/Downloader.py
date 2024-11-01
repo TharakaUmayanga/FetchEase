@@ -1,9 +1,11 @@
+import os
+
 from core.YoutubeDownloader import YoutubeDownloader
 
 
 class Downloader:
-    def __init__(self):
-        pass
+    def __init__(self, download_path:str):
+        self.download_path = os.path.abspath(download_path)
 
     def download_queue(self, queue):
         for item in queue:
@@ -17,19 +19,22 @@ class Downloader:
                 print(f"Unknown item type: {item['type']}")
 
     def download_video(self, url, quality="best"):
+        download_path = os.path.join(self.download_path, "video")
         if "youtube.com" in url:
-            YoutubeDownloader().download_video(url, quality)
+            YoutubeDownloader(download_path).download_video(url, quality)
         else:
             Exception("Unsupported website")
 
     def download_playlist(self, url, quality="best"):
+        download_path = os.path.join(self.download_path, "playlist")
         if "youtube.com" in url:
-            YoutubeDownloader().download_playlist(url, quality)
+            YoutubeDownloader(download_path).download_playlist(url, quality)
         else:
             Exception("Unsupported website")
 
     def download_audio(self, url, quality="best"):
+        download_path = os.path.join(self.download_path, "audio")
         if "youtube.com" in url:
-            YoutubeDownloader().download_audio(url, quality)
+            YoutubeDownloader(download_path).download_audio(url, quality)
         else:
             Exception("Unsupported website")
