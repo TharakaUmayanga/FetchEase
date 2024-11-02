@@ -1,4 +1,7 @@
+import os
+
 from yt_dlp import YoutubeDL
+
 
 class YoutubeDownloader:
     def __init__(self, download_path):
@@ -16,10 +19,23 @@ class YoutubeDownloader:
         return video_quality[quality]
 
     def download_playlist(self, playlist_url, quality='best'):
+        extract_opts = {
+            'extract_flat': True,  # Extract only metadata, not download
+            'playlistend': 1,  # Only need the first item to get the playlist name
+            'quiet': True
+        }
+
+        with YoutubeDL(extract_opts) as ydl:
+            info = ydl.extract_info(playlist_url, download=False)
+            playlist_title = info.get('title', 'Playlist')
+
+        # Create a directory named after the playlist title
+        playlist_folder = os.path.join(self.download_path, playlist_title)
+        os.makedirs(playlist_folder, exist_ok=True)
         ydl_opts = {
             'format': self._set_video_quality(quality),
             'noplaylist': False,
-            'outtmpl': f'{self.download_path}/%(title)s.%(ext)s',
+            'outtmpl': f'{playlist_folder}/%(title)s.%(ext)s',
             'progress_hooks': [self._progress_hook]
         }
         with YoutubeDL(ydl_opts) as ydl:
