@@ -289,7 +289,7 @@ class DownloadManagerGUI(ctk.CTk):
         new_path = self.path_input.get()
         if os.path.exists(new_path):
             self.download_path = new_path
-            self.settings.set_download_path(new_path)
+            self.settings.set_default_download_path(new_path)
             self.show_success("Settings saved successfully")
         else:
             self.show_error("Invalid download path")
