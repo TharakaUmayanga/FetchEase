@@ -9,10 +9,15 @@ from download_manager.Settings import Settings
 
 
 class Downloader:
-    def __init__(self):
+    def __init__(self,ui_callback=None):
         self.download_path = Settings().get_download_path()
         self.scheduled_downloads = []
+        self.ui_callback = ui_callback
         self._start_scheduler_thread()
+
+    def _progress_callback(self, progress_info, progress_bar, progress_label):
+        if self.ui_callback:
+            self.ui_callback(progress_info, progress_bar, progress_label)
 
     def _start_scheduler_thread(self):
         """
@@ -39,24 +44,24 @@ class Downloader:
             else:
                 print(f"Unknown item type: {item['type']}")
 
-    def download_video(self, url, quality="best"):
+    def download_video(self, url, quality="best",progress_bar=None, progress_label=None):
         download_path = os.path.join(self.download_path, "video")
         if "youtube.com" in url:
-            YoutubeDownloader(download_path).download_video(url, quality)
+            YoutubeDownloader(download_path,lambda info: self._progress_callback(info, progress_bar, progress_label)).download_video(url, quality)
         else:
             Exception("Unsupported website")
 
-    def download_playlist(self, url, quality="best"):
+    def download_playlist(self, url, quality="best",progress_bar=None, progress_label=None):
         download_path = os.path.join(self.download_path, "playlists")
         if "youtube.com" in url:
-            YoutubeDownloader(download_path).download_playlist(url, quality)
+            YoutubeDownloader(download_path,lambda info: self._progress_callback(info, progress_bar, progress_label)).download_path(url, quality)
         else:
             Exception("Unsupported website")
 
-    def download_audio(self, url, quality="best"):
+    def download_audio(self, url, quality="best",progress_bar=None, progress_label=None):
         download_path = os.path.join(self.download_path, "audio")
         if "youtube.com" in url:
-            YoutubeDownloader(download_path).download_audio(url, quality)
+            YoutubeDownloader(download_path,lambda info: self._progress_callback(info, progress_bar, progress_label)).download_audio(url, quality)
         else:
             Exception("Unsupported website")
 

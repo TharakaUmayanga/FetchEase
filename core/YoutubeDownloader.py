@@ -4,9 +4,10 @@ from yt_dlp import YoutubeDL
 
 
 class YoutubeDownloader:
-    def __init__(self, download_path):
+    def __init__(self, download_path,progress_callback=None):
         self.download_path = download_path
         self.ydl_opts = {}
+        self.progress_callback = progress_callback
 
     def _set_video_quality(self, quality):
         video_quality = {
@@ -52,8 +53,14 @@ class YoutubeDownloader:
             ydl.download([video_url])
 
     def _progress_hook(self, d):
-        if d['status'] == 'downloading':
-            print(f"Downloading: {d['_percent_str']} at {d['_speed_str']} - ETA: {d['_eta_str']}")
+
+        progress_info = {
+                'percent': d.get('_percent_str', '0%'),
+            'speed': d.get('_speed_str', '0.00KiB/s'),
+            'eta': d.get('_eta_str', 'N/A')
+            }
+        if self.progress_callback:
+                self.progress_callback(progress_info)
         elif d['status'] == 'finished':
             print("Download completed! Processing...")
 
