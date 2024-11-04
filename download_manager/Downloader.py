@@ -13,7 +13,11 @@ class Downloader:
         self.download_path = Settings().get_download_path()
         self.scheduled_downloads = []
         self.ui_callback = ui_callback
+
         self._start_scheduler_thread()
+        self.pause_event = threading.Event()
+        self.stop_event = threading.Event()
+        self.pause_event.set()
 
     def _progress_callback(self, progress_info, progress_bar, progress_label):
         if self.ui_callback:
@@ -46,10 +50,10 @@ class Downloader:
 
     def download_video(self, url, quality="best",progress_bar=None, progress_label=None):
         download_path = os.path.join(self.download_path, "video")
-        if "youtube.com" in url:
-            YoutubeDownloader(download_path,lambda info: self._progress_callback(info, progress_bar, progress_label)).download_video(url, quality)
-        else:
-            Exception("Unsupported website")
+        # if "youtube.com" in url:
+        YoutubeDownloader(download_path,lambda info: self._progress_callback(info, progress_bar, progress_label)).download_video(url, quality)
+        # else:
+        #     Exception("Unsupported website")
 
     def download_playlist(self, url, quality="best",progress_bar=None, progress_label=None):
         download_path = os.path.join(self.download_path, "playlists")
@@ -197,4 +201,16 @@ class Downloader:
             print("---")
 
         return scheduled_ids
+
+    def pause_download(self):
+        self.pause_event.clear()
+
+    def resume_download(self):
+        self.pause_event.set()
+
+    def stop_download(self):
+        self.stop_event.set()
+        # Reset stop event for future downloads
+        threading.Timer(1.0, self.stop_event.clear).start()
+
 
