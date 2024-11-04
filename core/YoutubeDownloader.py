@@ -1,13 +1,16 @@
 import os
+import time
 
 from yt_dlp import YoutubeDL
 
 
 class YoutubeDownloader:
-    def __init__(self, download_path,progress_callback=None):
+    def __init__(self, download_path,progress_callback=None ,pause_event=None, stop_event=None):
         self.download_path = download_path
         self.ydl_opts = {}
         self.progress_callback = progress_callback
+        self.pause_event = pause_event
+        self.stop_event = stop_event
 
     def _set_video_quality(self, quality):
         video_quality = {
@@ -53,6 +56,14 @@ class YoutubeDownloader:
             ydl.download([video_url])
 
     def _progress_hook(self, d):
+        if self.stop_event and self.stop_event.is_set():
+            raise Exception("Download stopped by user")
+
+        if self.pause_event and not self.pause_event.is_set():
+            while not self.pause_event.is_set():
+                if self.stop_event and self.stop_event.is_set():
+                    raise Exception("Download stopped while paused")
+                time.sleep(0.1)
 
         progress_info = {
                 'percent': d.get('_percent_str', '0%'),

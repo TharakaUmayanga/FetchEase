@@ -216,6 +216,32 @@ class DownloadManagerGUI(ctk.CTk):
         progress_label = ctk.CTkLabel(item_frame, text="")
         progress_label.grid(row=2, column=0, pady=10, padx=20, sticky="ew")
 
+        downloader = self.downloader
+
+        # Pause button
+        pause_button = ctk.CTkButton(
+            item_frame,
+            text="Pause",
+            command=downloader.pause_download
+        )
+        pause_button.grid(row=3, column=0, padx=5, pady=5)
+
+        # Resume button
+        resume_button = ctk.CTkButton(
+            item_frame,
+            text="Resume",
+            command=downloader.resume_download
+        )
+        resume_button.grid(row=3, column=1, padx=5, pady=5)
+
+        # Stop button
+        stop_button = ctk.CTkButton(
+            item_frame,
+            text="Stop",
+            command=downloader.stop_download
+        )
+        stop_button.grid(row=3, column=2, padx=5, pady=5)
+
 
         # Configure grid
         item_frame.grid_columnconfigure(0, weight=1)
