@@ -1,15 +1,30 @@
+import json
+from pathlib import Path
+
 import customtkinter as ctk
 import os
 from datetime import datetime
 from PIL import Image
 import threading
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
+from download_manager.server import DownloadServer
 from download_manager.Downloader import Downloader
 from download_manager.Settings import Settings
 
 
+class FileCreatedHandler(FileSystemEventHandler):
+    def __init__(self, callback):
+        self.callback = callback
+
+    def on_created(self, event):
+        if not event.is_directory:
+            self.callback(event.src_path)
+
+
 class DownloadManagerGUI(ctk.CTk):
-    def __init__(self):
+    def __init__(self, root_path:Path):
         super().__init__()
 
         # Initialize settings and downloader
@@ -39,7 +54,31 @@ class DownloadManagerGUI(ctk.CTk):
         # self.progress_label = ctk.CTkLabel(self, text="")
         # self.progress_label.grid(row=2, column=0, pady=10, padx=20, sticky="ew")
 
-    def update_progress(self, progress_info, progress_bar,progress_label):
+        # Initialize file system watcher
+        self.config_path = root_path.joinpath(".config")
+        if not self.config_path.exists():
+            self.config_path.mkdir(parents=True, exist_ok=True)
+
+
+
+        self.event_handler = FileCreatedHandler(self.capture_download)
+        self.observer = Observer()
+        self.observer.schedule(self.event_handler, path=str(self.config_path), recursive=False)
+        self.observer.start()
+
+        # Call the check method periodically
+        self.check_observer()
+
+    def check_observer(self):
+        self.observer.join(1)
+        self.after(1000, self.check_observer)
+
+    def on_closing(self):
+        self.observer.stop()
+        self.observer.join()
+        self.destroy()
+
+    def update_progress(self, progress_info, progress_bar, progress_label):
         percent = float(progress_info['percent'].strip('%'))
         progress_bar.set(percent / 100)
         progress_label.configure(text=f"Speed: {progress_info['speed']} - ETA: {progress_info['eta']}")
@@ -242,11 +281,10 @@ class DownloadManagerGUI(ctk.CTk):
         )
         stop_button.grid(row=3, column=2, padx=5, pady=5)
 
-
         # Configure grid
         item_frame.grid_columnconfigure(0, weight=1)
 
-        return item_frame, progress_bar,progress_label
+        return item_frame, progress_bar, progress_label
 
     def start_download(self):
         """Start a new download"""
@@ -258,7 +296,7 @@ class DownloadManagerGUI(ctk.CTk):
         quality = self.quality_var.get()
 
         # Create download item in UI
-        item_frame, progress_bar,progress_label = self.create_download_item(url, download_type)
+        item_frame, progress_bar, progress_label = self.create_download_item(url, download_type)
 
         # Start download in separate thread
         thread = threading.Thread(
@@ -276,11 +314,11 @@ class DownloadManagerGUI(ctk.CTk):
         try:
 
             if download_type == "video":
-                self.downloader.download_video(url, quality,progress_bar, progress_label)
+                self.downloader.download_video(url, quality, progress_bar, progress_label)
             elif download_type == "audio":
-                self.downloader.download_audio(url, quality,progress_bar, progress_label)
+                self.downloader.download_audio(url, quality, progress_bar, progress_label)
             elif download_type == "playlist":
-                self.downloader.download_playlist(url, quality,progress_bar, progress_label)
+                self.downloader.download_playlist(url, quality, progress_bar, progress_label)
 
             progress_bar.set(1.0)
 
@@ -368,7 +406,27 @@ class DownloadManagerGUI(ctk.CTk):
         )
         button.pack(pady=10)
 
+    def capture_download(self, file_uri):
 
-if __name__ == "__main__":
-    app = DownloadManagerGUI()
-    app.mainloop()
+        file_name = os.path.basename(file_uri)
+        if file_name == "added_download.json":
+            try:
+                with open(file_uri, "r") as download_json:
+                    download = json.load(download_json)
+                    url = download["url"]
+                    type = download["type"]
+                    quality = download["quality"]
+                    scheduled = download["scheduled"]
+                    schedule_time = download["schedule_time"]
+                    print(f"download captured {url} {type} {quality} {scheduled} {schedule_time}")
+                # remove file
+                os.remove(file_uri)
+            except Exception as e:
+                print(f"problem  {e} ")
+
+
+# if __name__ == "__main__":
+#     # DownloadServer().run()
+#     app = DownloadManagerGUI()
+#     app.protocol("WM_DELETE_WINDOW", app.on_closing)
+#     app.mainloop()
