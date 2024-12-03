@@ -1,0 +1,6 @@
+customtkinter
+watchdog
+pathlib
+flask
+flask-cors
+schedule
