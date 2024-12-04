@@ -24,7 +24,7 @@ class FileCreatedHandler(FileSystemEventHandler):
 
 
 class DownloadManagerGUI(ctk.CTk):
-    def __init__(self, root_path:Path):
+    def __init__(self, root_path:Path, server:DownloadServer=None):
         super().__init__()
 
         # Initialize settings and downloader
@@ -47,19 +47,15 @@ class DownloadManagerGUI(ctk.CTk):
         self.scheduled_downloads = []
 
         self.downloader = Downloader(self.update_progress)
-        # self.progress_label = ctk.CTkLabel(self, text="")
-        # self.progress_label.grid(row=2, column=0, pady=10, padx=20, sticky="ew")
-        # self.progress_bar = ctk.CTkProgressBar(self)
-        # self.progress_bar.grid(row=1, column=0, pady=20, padx=20, sticky="ew")
-        # self.progress_label = ctk.CTkLabel(self, text="")
-        # self.progress_label.grid(row=2, column=0, pady=10, padx=20, sticky="ew")
 
         # Initialize file system watcher
         self.config_path = root_path.joinpath(".config")
         if not self.config_path.exists():
             self.config_path.mkdir(parents=True, exist_ok=True)
 
-
+        # Set up server callback if server is provided
+        if server:
+            server.set_download_callback(self.add_download_from_extension)
 
         self.event_handler = FileCreatedHandler(self.capture_download)
         self.observer = Observer()
@@ -407,22 +403,106 @@ class DownloadManagerGUI(ctk.CTk):
         button.pack(pady=10)
 
     def capture_download(self, file_uri):
-
+        print(f"UI: Capturing download from file: {file_uri}")
         file_name = os.path.basename(file_uri)
         if file_name == "added_download.json":
             try:
                 with open(file_uri, "r") as download_json:
                     download = json.load(download_json)
-                    url = download["url"]
-                    type = download["type"]
-                    quality = download["quality"]
-                    scheduled = download["scheduled"]
-                    schedule_time = download["schedule_time"]
-                    print(f"download captured {url} {type} {quality} {scheduled} {schedule_time}")
+                    print(f"UI: Download info from file: {download}")
+                    # Create download item in UI and start download
+                    item_frame, progress_bar, progress_label = self.create_download_item(
+                        download["url"],
+                        download["type"]
+                    )
+                    print("UI: Created download item")
+                    # Start download in separate thread
+                    thread = threading.Thread(
+                        target=self.download_thread,
+                        args=(
+                            download["url"],
+                            download["type"],
+                            download["quality"],
+                            progress_bar,
+                            progress_label
+                        )
+                    )
+                    thread.daemon = True
+                    thread.start()
+                    print("UI: Started download thread")
                 # remove file
                 os.remove(file_uri)
+                print("UI: Removed config file")
             except Exception as e:
-                print(f"problem  {e} ")
+                print(f"UI Error starting download: {e}")
+
+    def add_download_from_extension(self, download_info):
+        """Add a new download from browser extension"""
+        print(f"UI: Adding download from extension: {download_info}")
+        if download_info.get('scheduled'):
+            # Add to scheduled downloads
+            self.scheduled_downloads.append(download_info)
+            # Create scheduled download item
+            self.create_scheduled_item(
+                download_info['url'],
+                download_info['type'],
+                download_info['schedule_time']
+            )
+            print("UI: Added scheduled download")
+        else:
+            print("UI: Creating immediate download")
+            # Create download item in UI
+            item_frame, progress_bar, progress_label = self.create_download_item(
+                download_info['url'],
+                download_info['type']
+            )
+            # Start download in separate thread
+            thread = threading.Thread(
+                target=self.download_thread,
+                args=(
+                    download_info['url'],
+                    download_info['type'],
+                    download_info['quality'],
+                    progress_bar,
+                    progress_label
+                )
+            )
+            thread.start()
+            print("UI: Started download thread")
+
+    def create_scheduled_item(self, url, download_type, schedule_time):
+        """Create a new scheduled download item widget"""
+        item_frame = ctk.CTkFrame(self.scheduled_scroll)
+        item_frame.grid(sticky="ew", padx=5, pady=5)
+        self.scheduled_scroll.grid_columnconfigure(0, weight=1)
+
+        # URL label
+        url_label = ctk.CTkLabel(
+            item_frame,
+            text=url[:50] + "..." if len(url) > 50 else url
+        )
+        url_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+
+        # Type label
+        type_label = ctk.CTkLabel(
+            item_frame,
+            text=download_type.upper(),
+            fg_color=("gray70", "gray30"),
+            corner_radius=6,
+            width=60,
+            height=24
+        )
+        type_label.grid(row=0, column=1, padx=10, pady=5)
+
+        # Schedule time label
+        schedule_label = ctk.CTkLabel(
+            item_frame,
+            text=schedule_time.strftime("%Y-%m-%d %H:%M")
+        )
+        schedule_label.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky="ew")
+
+        # Configure grid
+        item_frame.grid_columnconfigure(0, weight=1)
 
 
 # if __name__ == "__main__":

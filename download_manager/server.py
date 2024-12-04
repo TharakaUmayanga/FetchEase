@@ -7,22 +7,39 @@ from datetime import datetime
 import threading
 import queue
 
-app = Flask(__name__)
-CORS(app)  # Enable CORS for Chrome extension
-
-
 class DownloadServer:
     def __init__(self, project_root:Path):
-        self.app = app
         self.project_root = project_root
         self.config_path = self.project_root / ".config"
+        self.download_callback = None
+        self.app = Flask(__name__)
+        CORS(self.app)  # Enable CORS for Chrome extension
 
+    def set_download_callback(self, callback):
+        """Set callback function to be called when new download is received"""
+        self.download_callback = callback
 
+    def add_pending_downloads(self, pending_download):
+        """Add download to pending queue and notify UI if callback is set"""
+        print(f"Server: Adding pending download: {pending_download}")
+        if self.download_callback:
+            print("Server: Calling download callback")
+            self.download_callback(pending_download)
+        else:
+            print("Server: Warning - No download callback set")
 
-        @app.route('/add-download', methods=['POST'])
+        path = self.config_path.joinpath("added_download.json")
+        print(f"Server: Writing to config file: {path}")
+        with open(path, "w") as f:
+            json.dump(pending_download, f)
+
+    @property
+    def add_download_route(self):
+        @self.app.route('/add-download', methods=['POST'])
         def add_download():
             try:
                 data = request.json
+                print(data)
                 url = data['url']
                 download_type = data['type']
                 quality = data['quality']
@@ -49,17 +66,13 @@ class DownloadServer:
                     'status': 'error',
                     'message': str(e)
                 }), 500
-
-
+        return add_download
 
     def run(self, host='localhost', port=5000):
         """Run the server"""
         self.app.run(host=host, port=port)
 
-    def add_pending_downloads(self, download_info:dict):
-        """Add download to pending downloads queue"""
-        path = self.config_path.joinpath("added_download.json")
-        with open(path, "w") as f:
-            json.dump(download_info, f)
-
-
+if __name__ == '__main__':
+    server = DownloadServer(Path('.'))
+    server.add_download_route
+    server.run()
