@@ -9,6 +9,11 @@ An open-source Python project to simplify downloading and managing Video ,Audio 
 ### Coming Soon
 Download any file from any website with ease and convenience.
 
+## Chromium Plugin
+
+Get the plugin for your browser here
+[text](https://github.com/TharakaUmayanga/FetchEase-Chromium-Plugin)
+
 ## Features
 
 - **Download Media**: Supports downloading videos, playlists, and audio in various qualities.
