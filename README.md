@@ -2,6 +2,10 @@
 
 An open-source Python project to simplify downloading and managing Video ,Audio and Playlist from Any website. It supports scheduled downloads, queues, and multiple media formats including videos, playlists, and audio.
 
+![alt text](image.png)
+
+
+
 ### Coming Soon
 Download any file from any website with ease and convenience.
 
