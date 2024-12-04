@@ -213,4 +213,14 @@ class Downloader:
         # Reset stop event for future downloads
         threading.Timer(1.0, self.stop_event.clear).start()
 
+    def pause(self):
+        """Pause all downloads"""
+        self.pause_event.clear()
 
+    def resume(self):
+        """Resume all downloads"""
+        self.pause_event.set()
+
+    def stop(self):
+        """Stop all downloads"""
+        self.stop_event.set()
